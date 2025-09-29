@@ -1,15 +1,21 @@
 {
   "name": "@piuma/schema",
   "version": "0.1.0",
-  "description": "",
+  "description": "A fast and lightweight TypeScript schema validation library",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "keywords": [],
+  "keywords": ["typescript", "validation", "schema", "type", "runtime"],
   "author": "back2dos",
   "license": "MIT",
   "type": "module",
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "build-bench": "npx esbuild benchmarks/wall/index.ts --bundle --outfile=benchmarks/bench.js",
     "bench": "npx tsx benchmarks/wall/index.ts"
   },
