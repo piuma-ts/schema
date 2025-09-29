@@ -4,51 +4,55 @@ A fast and lightweight validation library that can heal invalid data.
 
 # Motivation
 
-TypeScript has an expressive type system and, aside from a few small type holes, gives quite strong guarantees about the correctness of your data flow - assuming that the data actually is what the types say. For this assumption to be guaranteed, we must validate all incoming data at the application boundaries. 
+TypeScript has an expressive type system and, aside from a few small type holes, gives quite strong guarantees about the correctness of your data flow - assuming that the data actually is what the types say. For this assumption to be guaranteed, we must validate all incoming data at the application boundaries.
 
 This library aims to make such validation cheap, aiming for a sweet spot between JS size and runtime performance - in both throughput and initialization.
 
-The down side of strict validation however is that you get into an all-or-nothing situation: if data doesn't completely match your expectations, then it is just as bad as if there were major differences. Applications that don't validate their data may often get away with showing "undefined" or simply nothing in some part of the UI (unless of course the data is so misaligned with the code that it causes exceptions), which isn't ideal, but still leaves all other parts of the UI in a working state. 
+The down side of strict validation however is that you get into an all-or-nothing situation: if data doesn't completely match your expectations, then it is just as bad as if there were major differences. Applications that don't validate their data may often get away with showing "undefined" or simply nothing in some part of the UI (unless of course the data is so misaligned with the code that it causes exceptions), which isn't ideal, but still leaves all other parts of the UI in a working state.
 
 We want the best of both worlds: a way to strictly check the data, report any errors, but at the same time allow the application to continue functioning to at least some degree.
 
 # Quick Intro
 
+Install as one might expect:
+
+```bash
+npm install @piuma/schema
+```
+
 Syntactically, @piuma/schema aims to be as close to TypeScript syntax as possible (without bending over backwards). Here is a simple introductory example:
 
 ```typescript
-import { string, number, define, array } from "@piuma/schema";
+import { string, number, define, array } from '@piuma/schema';
 
 const Post = define({
   title: string,
   content: string,
-  "tags?": array(string),
-  comments: array(
-    {
-      user: string,
-      contents: string,
-      likes: number,
-    },
-  ),
+  'tags?': array(string),
+  comments: array({
+    user: string,
+    contents: string,
+    likes: number,
+  }),
 });
 
-type Post = typeof Post.fallback;// get the corresponding TypeScript type
+type Post = typeof Post.fallback; // get the corresponding TypeScript type
 
-const data:any = { title: "Lorem Ipsum", content: "Dolor sit amet" };
+const data: any = { title: 'Lorem Ipsum', content: 'Dolor sit amet' };
 
 console.log(Post.is(data)); // false
 console.log(Post.fix(data)); // [{ title: "Lorem Ipsum", content: "Dolor sit amet", comments: [] }, ["$: Missing key comments"]]
 ```
 
-Here you can also see a unique feature of @piuma/schema in action: The ability to *fix* invalid data, while reporting errors.
+Here you can also see a unique feature of @piuma/schema in action: The ability to _fix_ invalid data, while reporting errors.
 
 ## Automatic Data Fixing
 
-In the above example, we see the `fix` function being used to get both errors in the data *and* valid data.
+In the above example, we see the `fix` function being used to get a pair of both valid data _and_ errors found in the original data.
 
 It's important to understand when and how to use such functionality: Suppose some 3rd party API you depend on suddenly starts omitting one field in a giant payload, that is otherwise still useful. In some cases you may wish to treat this as if that API were down - an annoying but realistic scenario. More often than not however, you would prefer for a more graceful degradation, e.g. if you're loading video information from the YouTube API and at some point the response no longer includes a `dislikeCount`, you don't want all features that rely on the entirety of the data to simply stop working.
 
-Whenever you choose to use `fix`, it is *vital* to feed validation errors into some monitoring / alerting system, otherwise the degradation - while graceful - will be silent. You should also consider letting the user of your application know that the data is incomplete, if this can be achieved without disrupting UX.
+Whenever you choose to use `fix`, it is _vital_ to feed validation errors into some monitoring / alerting system, otherwise the degradation - while graceful - will be silent. You should also consider letting the user of your application know that the data is incomplete, if this can be achieved without disrupting UX.
 
 # Comparison
 
@@ -60,7 +64,7 @@ For reference, we'll be comparing this library to:
 
 The primary reason for creating this library was that nothing on npm seems to offer automatic data fixing, in particular none of the libraries above.
 
-Other concerns were size (download time) and performance (blocking time) - we'll have a detailed look at how @piuma/schema fares here compared to some pretty tough competition from both Valibot and ArkType.
+Other concerns were size (download time) and performance (blocking time) - we'll have a detailed look at how @piuma/schema fares here compared to some pretty tough competition from both Valibot and ArkType. The sources of the benchmarks can be found at https://github.com/piuma-ts/schema/tree/master/benchmarks
 
 ## JIT
 
@@ -81,33 +85,33 @@ In this comparison we are using esbuild to minify the JavaScript. Different bund
 
 First, let's compare these libraries in terms of the size they will add to your JavaScript, simply by using them:
 
-| Library           | Size          |
-| ----------------- | ------------- |
-| Valibot           |        6.9 kb |
-| @piuma/schema     |       11.8 kb |
-| Zod               |       55.8 kb |
-| ArkType           |      146.0 kb |
+| Library       |      Size |
+| :------------ | --------: |
+| Valibot       |    6.9 kb |
+| @piuma/schema |   11.8 kb |
+| Zod           |   55.8 kb |
+| ArkType       |  146.0 kb |
 
-The Valibot and Zod numbers are based on including roughly the functionality that you will find in @piuma/schema. 
+The Valibot and Zod numbers are based on including roughly the same functionality as @piuma/schema.
 
 ### Schema Size
 
 Another factor to be taken into account is how big the schema declarations will be in the end.
 
-| Library           | Benchmark Schema | Unit Test Schema | Geometric Mean |
-| ----------------- | ---------------- | ---------------- | -------------- |
-| @piuma/schema     |           0.62kb |           0.76kb |         0.69kb |
-| ArkType           |           0.63kb |           0.85kb |         0.73kb |
-| Zod (optimal)     |           0.65kb |           0.93kb |         0.77kb |
-| Valibot           |           0.71kb |           0.93kb |         0.81kb |
-| Zod (idiomatic)   |           0.79kb |           1.28kb |         1.01kb |
+| Library         | Benchmark Schema | Unit Test Schema | Geometric Mean |
+| :-------------- | ---------------: | ---------------: | -------------: |
+| @piuma/schema   |          0.62 kb |          0.76 kb |        0.69 kb |
+| ArkType         |          0.63 kb |          0.85 kb |        0.73 kb |
+| Zod (optimal)   |          0.65 kb |          0.93 kb |        0.77 kb |
+| Valibot         |          0.71 kb |          0.93 kb |        0.81 kb |
+| Zod (idiomatic) |          0.79 kb |          1.28 kb |        1.01 kb |
 
-We are using two schemas here, one from our speed benchmarks (see below) and one from our tests, which is slightly larger, even if structurally simpler. Zod is here twice:
+We are using two schemas here, one from our speed benchmarks (see below) and one from our tests, which is slightly larger, even if structurally simpler. Zod has two entries, which are the following:
 
 - idiomatic: used as suggested in the docs: `import { z } from zod; z.object()`
-- optimal: used in a way that generates less code `import { object } from zod; objcet()`
+- optimal: used in a way that generates more compact code `import { object } from zod; object()`
 
-This comparison warrants more data points, but the difference we can already observe, roughly reflects the comparative terseness of @piuma/schema definitions as seen at the source level. Here is an attempt to explain the numbers above:
+This comparison warrants more data points, but the difference we can tentatively observe, roughly reflects the comparative terseness of @piuma/schema definitions as seen already at the source level. Here is an attempt to explain the numbers above:
 
 - ArkType relies on its own string based DSL to define types, which while terse potentially embeds a considerable amount of unminifiable strings in the output
 - Valibot (and optimal Zod) requires more function calls, e.g. `string()` vs. just `string` in @piuma/schema and does so even when nesting, e.g. `array(object({}))` vs. `array({})`
@@ -125,12 +129,12 @@ Numbers given are ops/sec (so higher is better), where the sample data is ~1KB o
 
 If you intend to do schema validation on the client side, then the speed at which schemas are created will impact your main thread blocking time.
 
-| Library               | Node 24.8.0 | Chrome 140.0 | Bun 1.2.22 | Firefox 143 | Geometric Mean |
-| --------------------- | ----------- | ------------ | ---------- | ----------- | -------------- |
-| Valibot               |        83 K |        112 K |      389 K |       333 K |          186 K |
-| @piuma/schema         |        31 K |         86 K |       73 K |        94 K |           66 K |
-| Zod                   |         3 K |          6 K |       12 K |        10 K |            7 K |
-| ArkType               |         1 K |          2 K |        2 K |         2 K |            2 K |
+| Library       | Node 24.8.0 | Chrome 140.0 | Bun 1.2.22 | Firefox 143 | Geometric Mean |
+| :------------ | ----------: | -----------: | ---------: | ----------: | -------------: |
+| Valibot       |        83 K |        112 K |      389 K |       333 K |          186 K |
+| @piuma/schema |        31 K |         86 K |       73 K |        94 K |           66 K |
+| Zod           |         3 K |          6 K |       12 K |        10 K |            7 K |
+| ArkType       |         1 K |          2 K |        2 K |         2 K |            2 K |
 
 If we imagine 20 schemas being processed on initial load, on a low power mobile device that is 10x slower than a high end desktop CPU, that means 100ms blocking time with ArkType, vs. ~3ms with @piuma/schema or even just ~1ms with Valibot.
 
@@ -154,7 +158,7 @@ With that in mind, let's check the numbers.
 Checking valid data:
 
 | Library                | Node 24.8.0 | Chrome 140.0 | Bun 1.2.22 | Firefox 143 | Geometric Mean |
-| ---------------------- | ----------- | ------------ | ---------- | ----------- | -------------- |
+| :--------------------- | ----------: | -----------: | ---------: | ----------: | -------------: |
 | @piuma/schema (quick)  |      6595 K |       7407 K |     5091 K |      2845 K |         5209 K |
 | @piuma/schema (jitted) |      5094 K |       6540 K |     4687 K |      2587 K |         4524 K |
 | ArkType                |      6739 K |       1476 K |     7186 K |      4684 K |         4271 K |
@@ -167,7 +171,7 @@ So @piuma/schema (jitted), like ArkType, is roughly 25x faster than Zod, which i
 Checking invalid data:
 
 | Library                | Node 24.8.0 | Chrome 140.0 | Bun 1.2.22 | Firefox 143 | Geometric Mean |
-| ---------------------- | ----------- | ------------ | ---------- | ----------- | -------------- |
+| :--------------------- | ----------: | -----------: | ---------: | ----------: | -------------: |
 | @piuma/schema (quick)  |      6502 K |       8372 K |     5537 K |      3125 K |         5632 K |
 | @piuma/schema (jitted) |      3828 K |       4586 K |     3785 K |      2155 K |         3506 K |
 | @piuma/schema (no-opt) |       600 K |        738 K |      840 K |       403 K |          617 K |
@@ -175,14 +179,14 @@ Checking invalid data:
 | Valibot                |        81 K |         87 K |       95 K |        80 K |           85 K |
 | Zod                    |        30 K |         33 K |       48 K |        34 K |           36 K |
 
-The "quick" mode in `@piuma/schema` stands out, because it is actually faster on invalid than valid data, since it can stop checking as soon as it encounters the first issue (the erroneous value has been put towards the end of the data to be validated, to avoid this speed up from being blown out of proportion). Everywhere else we see slowdowns: 
+The "quick" mode in `@piuma/schema` stands out, because it is actually faster on invalid than valid data, since it can stop checking as soon as it encounters the first issue (the erroneous value has been put towards the end of the data to be validated, to avoid this speed up from being blown out of proportion). Everywhere else we see slowdowns:
 
 - ArkType: ~30x
 - Zod: ~5x
 - @piuma/schema (jitted): ~1.3x
 - Valibot: ~1.15x
 
-In fact ArkType appears to generally perform poorly with invalid data, and as a result benchmarks can be constructed where ArkType is 100x *slower* than Zod, rather than 30x times faster (as [the one mentioned above](https://www.reddit.com/r/node/comments/1k7jcb8/false_claim_by_arktype_that_it_is_100x_faster/)).
+In fact ArkType appears to generally perform poorly with invalid data, and as a result benchmarks can be constructed where ArkType is 100x _slower_ than Zod, rather than 30x times faster (as [the one mentioned above](https://www.reddit.com/r/node/comments/1k7jcb8/false_claim_by_arktype_that_it_is_100x_faster/)).
 
 It is worth pointing out that significant slowdowns, like the one in ArkType and to a lesser degree the one in Zod, present a potential attack vector, where an attacker can use invalid data to adversely affect the performance characteristics of an application in a significant way.
 
@@ -199,16 +203,16 @@ The main goal is to validate data at the application edges (e.g. HTTP requests, 
 This library explicitly doesn't bring its own solution for branded types. One may yet hope that TypeScript will at some point get first-class support for this, but until such time there will be a multitude of approaches which are not mutually compatible. You should use whatever fits your application the best. Here's a simplistic example using `type-fest`:
 
 ```typescript
-import { Tagged } from "type-fest";
-import { string } from "@piuma/schema";
+import { Tagged } from 'type-fest';
+import { string } from '@piuma/schema';
 
-type Email = Tagged<string, "email">;
+type Email = Tagged<string, 'email'>;
 
 const Email = string.refine({
-  name: "email",
-  test: (value): value is Email => typeof value === "string" && value.includes("@"),
-  fallback: "me@example.com" as Email,
-  error: (value) => `${value} is not a valid email address`,
+  name: 'email',
+  test: (value): value is Email => typeof value === 'string' && value.includes('@'),
+  fallback: 'me@example.com' as Email,
+  error: value => `${value} is not a valid email address`,
 });
 ```
 
@@ -227,7 +231,7 @@ As demonstrated above, you can use `string.refine` to create a validator of your
 It's perhaps worth noting that _any_ schema has a `refine` method, so you can do:
 
 ```typescript
-const ICBM = define({ lat: number, long: number }).refine({ name: "icbm", ... /* do here what it takes to make sure it's a valid coordinate pair */});
+const LatLng = define({ lat: number, lng: number }).refine({ name: "latlng", ... /* validate coordinate bounds and precision */});
 const Percentages = define([number]).refine({ name: "percentages", ... /* make sure these add up to 100 */})
 ```
 
@@ -239,8 +243,8 @@ The primary goal of this library is to make sure that the data you obtain from e
 
 # Reasons to use @piuma/schema
 
-Having laid out
+We can conclude that @piuma/schema is for you if:
 
-1. You want greceful degradation through automatic data fixing.
-2. You need a library tailored specifically for ensuring at runtime that a value complies to a specific structure.
-3. You want a validation library that is small *and* fast.
+1. You want graceful degradation through automatic data fixing
+2. You need a library tailored specifically for ensuring at runtime that a value complies to a specific structure
+3. You want a validation library that is small _and_ fast, and is fast both during initialization _and_ in terms of throughput.
