@@ -246,5 +246,5 @@ The primary goal of this library is to make sure that the data you obtain from e
 We can conclude that @piuma/schema is for you if:
 
 1. You want graceful degradation through automatic data fixing
-2. You need a library tailored specifically for ensuring at runtime that a value complies to a specific structure
-3. You want a validation library that is small _and_ fast, and is fast both during initialization _and_ in terms of throughput.
+2. You need a library tailored specifically for ensuring at runtime that a value complies to a specific structure (and nothing more)
+3. You want a validation library that is small _and_ fast, and is fast both during initialization _and_ in terms of throughput
