@@ -58,11 +58,11 @@ Whenever you choose to use `fix`, it is _vital_ to feed validation errors into s
 
 For reference, we'll be comparing this library to:
 
-- Zod: no doubt the most popular option
-- Valibot: among the smallest out there (if you make good use of its treeshakeability)
-- ArkType: among the fastest out there (although this really quite depends on what you measure and how)
+- Zod (4.1.11): no doubt the most popular option
+- Valibot (1.1.0): among the smallest out there (if you make good use of its treeshakeability)
+- ArkType (2.1.22): among the fastest out there (although this really quite depends on what you measure and how)
 
-The primary reason for creating this library was that nothing on npm seems to offer automatic data fixing, in particular none of the libraries above.
+The primary reason for creating yet another validation library was that nothing on npm seems to offer automatic data fixing, in particular none of the libraries above.
 
 Other concerns were size (download time) and performance (blocking time) - we'll have a detailed look at how @piuma/schema fares here compared to some pretty tough competition from both Valibot and ArkType. The sources of the benchmarks can be found at https://github.com/piuma-ts/schema/tree/master/benchmarks
 
