@@ -132,7 +132,7 @@ If you intend to do schema validation on the client side, then the speed at whic
 | Library       | Node 24.8.0 | Chrome 140.0 | Bun 1.2.22 | Firefox 143 | Geometric Mean |
 | :------------ | ----------: | -----------: | ---------: | ----------: | -------------: |
 | Valibot       |        83 K |        112 K |      389 K |       333 K |          186 K |
-| @piuma/schema |        31 K |         86 K |       73 K |        94 K |           66 K |
+| @piuma/schema |        37 K |         86 K |       73 K |        94 K |           68 K |
 | Zod           |         3 K |          6 K |       12 K |        10 K |            7 K |
 | ArkType       |         1 K |          2 K |        2 K |         2 K |            2 K |
 
@@ -140,7 +140,7 @@ If we imagine 20 schemas being processed on initial load, on a low power mobile 
 
 It should be added that this benchmark is actually slightly skewed in favor of Valibot:
 
-1. The Valibot schema definition we are using explicitly employs `variant` to create a discriminated union that requires explicitly passing a key to determine the discriminant property, so as to give optimal validation performance.
+1. The Valibot schema definition we are using manually employs `variant` to create a discriminated union that requires explicitly passing a key to determine the discriminant property, so as to give optimal validation performance.
 2. The @piuma/schema definition just uses the generic `union`, which us then has to build a decision tree to discover the discriminant property. This is more in line with how discriminated unions are defined in TypeScript. Moreover it ensures better performance without requiring the developer to intervene.
 
 ### Validation Speed
@@ -188,7 +188,7 @@ The "quick" mode in `@piuma/schema` stands out, because it is actually faster on
 
 In fact ArkType appears to generally perform poorly with invalid data, and as a result benchmarks can be constructed where ArkType is 100x _slower_ than Zod, rather than 30x times faster (as [the one mentioned above](https://www.reddit.com/r/node/comments/1k7jcb8/false_claim_by_arktype_that_it_is_100x_faster/)).
 
-It is worth pointing out that significant slowdowns, like the one in ArkType and to a lesser degree the one in Zod, present a potential attack vector, where an attacker can use invalid data to adversely affect the performance characteristics of an application in a significant way.
+It is worth pointing out that significant slowdowns, like the one in ArkType and to a lesser degree the one in Zod, present a potential attack vector, where an attacker can funnel invalid data into a validating endpoint to adversely affect the performance characteristics of an application in a significant way.
 
 # Non-Goals
 

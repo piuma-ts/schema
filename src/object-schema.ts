@@ -1,6 +1,7 @@
 import { string, number, boolean, ObjectDefinition, object, SchemaType } from '.';
 import { Schema, TYPE, Path, ErrorHandler, ABORT, mismatch, RuntimeType, runtimeType, config, makeChecker, print } from './common';
 
+let propertyIdCounter = 0;
 export class ObjectProperty<T> {
   readonly score: number;
   readonly param: string;
@@ -10,7 +11,7 @@ export class ObjectProperty<T> {
     readonly optional: boolean
   ) {
     this.score = schema.score + (optional ? 100 : 0);
-    this.param = `p_${key.replace(/[^a-zA-Z0-9_$]/g, '_')}_${schema.id}_${optional}`;
+    this.param = `p_${propertyIdCounter++}`;
   }
 
   protected code: string | undefined;
