@@ -1,0 +1,15 @@
+---
+alwaysApply: true
+---
+
+# Project Structure Rules
+
+## Directory Layout
+- src/ - Core schema implementations
+- tests/ - Tests using the node native test runner
+- benchmarks/ - comparative performance tests
+
+## Build/Test Environment
+- Strict TypeScript
+- Node native test runner (no Jest/Mocha)
+- Multiple platform benchmarks (Node/Chrome/Bun/Firefox)

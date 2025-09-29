@@ -1,0 +1,28 @@
+---
+globs: benchmarks/**.ts
+alwaysApply: false
+---
+# Benchmarking Rules
+
+## Required Comparisons
+- Schema creation speed
+- Validation speed (valid data)
+- Validation speed (invalid data)
+- Library size comparison
+
+## Libraries to Compare against
+- Zod
+- Valibot
+- ArkType
+
+## Metrics to Track
+- ops/sec
+- Bundle size
+- Schema definition size
+- Initialization time
+
+## Test Environments
+- Node (latest LTS)
+- Chrome (latest)
+- Bun (latest)
+- Firefox (latest)

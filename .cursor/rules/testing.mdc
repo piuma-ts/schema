@@ -1,0 +1,23 @@
+---
+globs: tests/**.ts
+alwaysApply: false
+---
+# Testing Rules
+
+## Test Structure
+```typescript
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+
+describe("SchemaName", () => {
+  it("validates valid data", () => {});
+  it("handles invalid data", () => {});
+  it("fixes invalid data", () => {});
+});
+```
+
+## Coverage
+- Type validation
+- Error messages
+- Fix behavior
+- Edge cases

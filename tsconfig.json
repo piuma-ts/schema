@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "downlevelIteration": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "strict": true,
+    "module": "esnext",
+    "target": "ESNext",
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "declaration": true,
+    "outDir": "./dist",
+    "lib": ["ESNext"],
+    "paths": {
+      "@piuma/schema": ["./src"],
+    }
+  },
+  "include": ["src/index.ts"],
+  "exclude": ["node_modules", "dist", "tests", "benchmarks"]
+}
