@@ -1,7 +1,7 @@
 import { Schema, TYPE, Path, ErrorHandler, ABORT, mismatch, RuntimeType, runtimeType } from './common';
 
-export class ArraySchema<T> extends Schema<T[]> {
-  get fallback(): T[] {
+export class ArraySchema<T> extends Schema<ReadonlyArray<T>> {
+  get fallback(): ReadonlyArray<T> {
     return [];
   }
   readonly [TYPE] = 'array';
@@ -15,24 +15,25 @@ export class ArraySchema<T> extends Schema<T[]> {
     super();
   }
 
-  check(dryRun: boolean, value: unknown, type: RuntimeType, path: Path, pos: number, onError: ErrorHandler): T[] | ABORT {
+  check(dryRun: boolean, value: unknown, type: RuntimeType, path: Path, pos: number, onError: ErrorHandler): ReadonlyArray<T> | ABORT {
     if (type !== 'array') {
       if (onError === ABORT) return ABORT;
       onError(path, pos, mismatch('array', value));
       return [];
     }
 
-    const length = (value as T[]).length;
+    const typed = value as T[];
+    const { length } = typed;
     const { item } = this;
 
     for (let i = 0; i < length; i++) {
       if (onError !== ABORT) path[pos] = i;
-      const found = (value as T[])[i];
+      const found = typed[i];
       const valid = item.check(dryRun, found, runtimeType(found), path, pos + 1, onError);
 
       if (valid === ABORT) return ABORT;
-      if (!dryRun && valid !== found) (value as T[])[i] = valid;
+      if (!dryRun && valid !== found) typed[i] = valid;
     }
-    return value as T[];
+    return typed;
   }
 }

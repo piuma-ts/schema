@@ -38,7 +38,7 @@ export function object<const Definition extends ObjectDefinition>(definition: De
   );
 }
 
-export function array<const Definition extends SchemaDefinition>(definition: Definition): Schema<SchemaType<Definition>[]> {
+export function array<const Definition extends SchemaDefinition>(definition: Definition): Schema<ReadonlyArray<SchemaType<Definition>>> {
   return new ArraySchema<SchemaType<Definition>>(define(definition) as any);
 }
 

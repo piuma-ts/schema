@@ -21,10 +21,6 @@ export class IntersectionSchema<T> extends Schema<T> {
     }
   }
 
-  get optional() {
-    return this.schemas.length === 0;
-  }
-
   readonly score = 10000;
   readonly [TYPE]: string;
   readonly check: Check<T>;
@@ -63,8 +59,8 @@ export class IntersectionSchema<T> extends Schema<T> {
 
     {
       function add(schema: Schema<T>) {
-        if (schema instanceof IntersectionSchema) {
-          for (const s of schema.schemas) add(s);
+        if (schema.score === 10000) {
+          for (const s of (schema as IntersectionSchema<T>).schemas) add(s);
         } else flat.push(schema);
         // TODO: consider union schemas
       }
@@ -93,11 +89,12 @@ function intersect<V>(values: V[]): V {
       return values[0];
     default:
       const first = values[0];
-      switch (typeof first) {
+      const type = typeof first;
+      switch (type) {
         case 'string':
         case 'number':
         case 'boolean':
-          return values.every(v => v === first) ? first : (undefined as V);
+          return first;
         case 'object':
           if (first === null) return null as V;
           if (Array.isArray(first)) return [] as V;

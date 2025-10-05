@@ -6,11 +6,11 @@ A fast and lightweight validation library that can heal invalid data.
 
 TypeScript has an expressive type system and, aside from a few small type holes, gives quite strong guarantees about the correctness of your data flow - assuming that the data actually is what the types say. For this assumption to be guaranteed, we must validate all incoming data at the application boundaries.
 
-This library aims to make such validation cheap, aiming for a sweet spot between JS size and runtime performance - in both throughput and initialization.
+This library aims to make such validation cheap, going for a sweet spot between JS size and runtime performance - in both throughput and initialization.
 
-The down side of strict validation however is that you get into an all-or-nothing situation: if data doesn't completely match your expectations, then it is just as bad as if there were major differences. Applications that don't validate their data may often get away with showing "undefined" or simply nothing in some part of the UI (unless of course the data is so misaligned with the code that it causes exceptions), which isn't ideal, but still leaves all other parts of the UI in a working state.
+The down side of strict validation however is that typically you get into an all-or-nothing situation: if data doesn't completely match your expectations, then it is just as bad as if there were major differences. Applications that don't validate their data may often get away with showing "undefined" or simply nothing in some part of the UI (unless of course the data is so misaligned with the code that it causes exceptions), which isn't ideal, but still leaves all other parts of the UI in a working state.
 
-We want the best of both worlds: a way to strictly check the data, report any errors, but at the same time allow the application to continue functioning to at least some degree.
+We want the best of both worlds: a way to strictly check the data, report any errors, but at the same time allow the application to continue functioning to at least some degree, by making incoming data comply with the expected structure.
 
 # Quick Intro
 
@@ -64,18 +64,56 @@ For reference, we'll be comparing this library to:
 
 The primary reason for creating yet another validation library was that nothing on npm seems to offer automatic data fixing, in particular none of the libraries above.
 
-Other concerns were size (download time) and performance (blocking time) - we'll have a detailed look at how @piuma/schema fares here compared to some pretty tough competition from both Valibot and ArkType. The sources of the benchmarks can be found at https://github.com/piuma-ts/schema/tree/master/benchmarks
+Other concerns were size (download time) and performance (blocking time) - we'll have a detailed look at how @piuma/schema fares here compared to some pretty tough competition from both Valibot and ArkType. The sources of all benchmarks can be found at https://github.com/piuma-ts/schema/tree/master/benchmarks
 
 ## JIT
 
 There are two ways that a schema can be used to validate a value:
 
-1. "interpreted": the data passed to the schema is used to inspect the value that is being validated, using reflection (Zod, Valibot)
-2. "compiled": the data passed to the schema is used to build an optimized JavaScript function (with `new Function()`) to do the validation.
+1. "interpreted": the data passed to the schema is used to inspect the value that is being validated, using reflection (like Zod and Valibot)
+2. "compiled": the data passed to the schema is used to build an optimized JavaScript function via `new Function()` to do the validation (like ArkType).
 
 The first approach is slower to run, the second slower to initialize. To get the best of both worlds, @piuma/schema combines both approaches, using interpreted mode by default and jitting any schemas that are run "a lot". Just how much "a lot" is is governed by `config.jit.threshold`. If you need to disable the JIT entirely (e.g. you're targeting Hermes or another runtime/environment where dynamic code generation is impractical), you can do so via `config.jit.threshold = Infinity`.
 
 This makes @piuma/schema somewhat larger than would be optimal, at least for the time being.
+
+## Syntax and Semantics
+
+### Lean Definitions
+
+To see what's meant by this, let's start with a relatively simple type and examine equivalent schemas:
+
+```typescript
+type User = {
+  type: "user",
+  name: string,
+  address: { street: string, company?: string }
+};
+
+const PiumaUser = define({
+  type: "user",
+  name: string,
+  address: { street: string, "company?": string }
+});
+
+const ArkUser = type({
+  type: '"user"',
+  name: "string",
+  address: { street: "string", "company?": "string" }
+});
+
+const ZodUser = z.object({// Valibot looks almost exactly the same
+  type: z.literal("user"),
+  name: z.string(),
+  address: z.object({ street: z.string(), company: z.string().optional() })
+});
+```
+
+As you can see, @piuma/schema tries to stay as close to TypeScript syntax as possible - meaning that for more complex things like unions and intersections you will have to be more explicit, but the more basic structures will look almost exactly like equivalent  TypeScript counterparts, requiring less cognitive overhead on the part of the reader.
+
+### Readonly All the Way
+
+The object and array types that @piuma/schema infers are all readonly. Immutable data structures tend to produce more robust code, so this makes for a meanigful default. You can always use mapped types to produce mutable counter parts when you deem it appropriate - at your own risk.
 
 ## Size Comparison
 
@@ -85,18 +123,18 @@ In this comparison we are using esbuild to minify the JavaScript. Different bund
 
 First, let's compare these libraries in terms of the size they will add to your JavaScript, simply by using them:
 
-| Library       |      Size |
-| :------------ | --------: |
-| Valibot       |    6.9 kb |
-| @piuma/schema |   11.8 kb |
-| Zod           |   55.8 kb |
-| ArkType       |  146.0 kb |
+| Library       |             Size |
+| :------------ | ---------------: |
+| Valibot       |           6.9 kb |
+| @piuma/schema |          11.2 kb |
+| Zod           |          55.8 kb |
+| ArkType       |         146.0 kb |
 
 The Valibot and Zod numbers are based on including roughly the same functionality as @piuma/schema.
 
 ### Schema Size
 
-Another factor to be taken into account is how big the schema declarations will be in the end.
+Another factor to be taken into account is how big the schema declarations will be in the end. We've already shown that the definitions are terser in the source and indeed we can see this reflected in the generated JavaScript:
 
 | Library         | Benchmark Schema | Unit Test Schema | Geometric Mean |
 | :-------------- | ---------------: | ---------------: | -------------: |
@@ -111,11 +149,11 @@ We are using two schemas here, one from our speed benchmarks (see below) and one
 - idiomatic: used as suggested in the docs: `import { z } from zod; z.object()`
 - optimal: used in a way that generates more compact code `import { object } from zod; object()`
 
-This comparison warrants more data points, but the difference we can tentatively observe, roughly reflects the comparative terseness of @piuma/schema definitions as seen already at the source level. Here is an attempt to explain the numbers above:
+This comparison warrants more data points, but still is quite representative of the differences you should expect. Here is an attempt to explain the numbers above:
 
-- ArkType relies on its own string based DSL to define types, which while terse potentially embeds a considerable amount of unminifiable strings in the output
+- ArkType relies on its own string based DSL to define types, which while elegant potentially embeds a considerable amount of unminifiable strings in the output
 - Valibot (and optimal Zod) requires more function calls, e.g. `string()` vs. just `string` in @piuma/schema and does so even when nesting, e.g. `array(object({}))` vs. `array({})`
-- Zod idiomatically uses method calls (e.g. `z.object()`) and even chaining, which are not minifiable (unless you bring out heavy tools like Google Closure)
+- Zod idiomatically uses method calls (e.g. `z.object()`) and even chaining, which are not minifiable (unless you bring out really heavy tools like Google Closure's advanced mode, which is a minefield of its own)
 
 ## Speed Comparison
 
@@ -141,7 +179,7 @@ If we imagine 20 schemas being processed on initial load, on a low power mobile 
 It should be added that this benchmark is actually slightly skewed in favor of Valibot:
 
 1. The Valibot schema definition we are using manually employs `variant` to create a discriminated union that requires explicitly passing a key to determine the discriminant property, so as to give optimal validation performance.
-2. The @piuma/schema definition just uses the generic `union`, which us then has to build a decision tree to discover the discriminant property. This is more in line with how discriminated unions are defined in TypeScript. Moreover it ensures better performance without requiring the developer to intervene.
+2. The @piuma/schema definition just uses the generic `union`, which then has to build a decision tree to discover the discriminant property. This is more in line with how discriminated unions are defined in TypeScript. Moreover it ensures better performance without requiring the developer to intervene.
 
 ### Validation Speed
 
@@ -226,7 +264,7 @@ For example, if you have a `Date`, then going through JSON will turn that into a
 
 Emails? Credit cards? Phone numbers? There's a wide variety of packages on npm for each of those. It is for you to choose which risks you want to take on your signup / checkout form ;)
 
-As demonstrated above, you can use `string.refine` to create a validator of your liking.
+As demonstrated above, you can use `string.refine` to create a validator of your liking, that relies on other npm modules to check against specific formats.
 
 It's perhaps worth noting that _any_ schema has a `refine` method, so you can do:
 
@@ -237,7 +275,7 @@ const Percentages = define([number]).refine({ name: "percentages", ... /* make s
 
 ## Async validation
 
-Many validation libraries support async validation, for example to check if an ID that was received is indeed in the database. While convenient, this is not really sound. Because such validation depends on an external source, no guarantees can actually be given if it succeeded. If, for example, said ID is deleted from the database at a later time, but the lifetime of the validated object has not yet expired, you have a live object that asserts the existence of a non-existent ID.
+Many validation libraries support async validation, for example to check if an ID that was received is indeed in the database. While convenient, this is not really sound. Because such validation depends on an external source, no guarantees can actually be given when it has succeeded. If, for example, said ID is deleted from the database at a later time, but the lifetime of the validated object has not yet expired, you have a live object that asserts the existence of a non-existent ID.
 
 The primary goal of this library is to make sure that the data you obtain from external sources indeed has the static type you expect it to have. How it relates to other data in other external sources is out of its scope and very much your responsibility.
 
