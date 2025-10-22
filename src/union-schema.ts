@@ -10,7 +10,7 @@ import { ObjectProperties, ObjectProperty, ObjectSchema } from './object-schema'
 import { string } from './string-schema';
 
 export function nullable<const Definition extends SchemaDefinition>(definition: Definition) {
-  return union(null, definition); // TODO: use a specialized schema?
+  return union(null, definition) as Schema<SchemaType<Definition> | null>; // TODO: use a specialized schema?
 }
 
 export function union<const Definitions extends SchemaDefinition[]>(...definitions: Definitions): Schema<Simplify<UnionOfSchemaTypes<Definitions>>> {
