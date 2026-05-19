@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "downlevelIteration": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
     "strict": true,
@@ -12,6 +11,7 @@
     "declaration": true,
     "outDir": "./dist",
     "lib": ["ESNext"],
+    "rootDir": "./src",
     "paths": {
       "@piuma/schema": ["./src"],
     }
