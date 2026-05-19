@@ -1,12 +1,12 @@
 import { boolean, define, number, SchemaDefinition, SchemaType } from '.';
 import { ArraySchema } from './array-schema';
-import { ABORT, Check, ErrorHandler, makeChecker, optimizeable, Path, print, RuntimeType, Schema, Simplify, TYPE } from './common';
+import { ABORT, Check, ErrorHandler, makeChecker, mismatch, optimizeable, Path, print, RuntimeType, Schema, Simplify, TYPE } from './common';
 
 import { type IntersectionSchema } from './intersection-schema';
 import { LazySchema } from './lazy-schema';
 import { NeverSchema } from './never-schema';
 
-import { ObjectProperties, ObjectProperty, ObjectSchema } from './object-schema';
+import { fieldAccess, ObjectProperties, ObjectProperty, ObjectSchema } from './object-schema';
 import { string } from './string-schema';
 
 export function nullable<const Definition extends SchemaDefinition>(definition: Definition) {
@@ -139,6 +139,15 @@ type Candidates<T> = [schema: Schema<T>, properties: ObjectProperties<T>][];
 
 function optimizedDecisionTree<T>(tree: Tree<T>, getFallback: () => T) {
   const lines: string[] = [];
+
+  lines.push(
+    `if (type !== 'object') {`,
+      `if (onError === ABORT) return ABORT`,
+      `onError(path, pos, mismatch('object', value))`,
+      `return getDefault()`,
+    `}`,
+  );
+
   const schemas: Schema<any>[] = [];
 
   function addSchema(schema: Schema<any>) {
@@ -161,7 +170,7 @@ function optimizedDecisionTree<T>(tree: Tree<T>, getFallback: () => T) {
       default:
         const { key, schema } = condition;
 
-        lines.push(`let found = value.${key}`); // TODO: potentially not a valid identifier
+        lines.push(`let found = value${fieldAccess(key)}`);
 
         const condCode =
           schema.score === 0
@@ -291,6 +300,11 @@ function makeCheck<T>(tree: Tree<T>, getFallback: () => T): Check<T> {
       const alternative = tree[2] ? makeCheck(tree[2], getFallback) : null;
 
       return (dryRun, value: any, type, path, pos, onError) => {
+        if (type !== 'object') {// TODO: should be enough to do this at the root, but oh well ...
+          if (onError === ABORT) return ABORT;
+          onError(path, pos, mismatch('object', value));
+          return getFallback();
+        }
         const branch = schema.is(value[key]) ? consequence : alternative;
         return branch ? branch(dryRun, value, type, path, pos, onError) : getFallback();
       };

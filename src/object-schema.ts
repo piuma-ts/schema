@@ -30,7 +30,7 @@ export class ObjectProperty<T> {
         if (key in (value as any)) {
           path[pos] = key;
           onError(path, pos + 1, mismatch(schema[TYPE], found));
-        } else onError(path, pos, `Missing key ${key}`);
+        } else onError(path, pos, `Missing key ${print(key)}`);
         if (!dryRun) (value as any)[key] = schema.fallback;
       }
     }
@@ -43,16 +43,18 @@ export class ObjectProperty<T> {
 
     const lines: string[] = [];
 
-    lines.push(`{`, `const found = value[${print(key)}];`);
+    const value = `value${fieldAccess(key)}`;
+
+    lines.push(`{`, `const found = ${value};`);
 
     function fallback() {
-      return `if (!dryRun) value[${print(key)}] = ${param}.fallback;`;
+      return `if (!dryRun) ${value} = ${param}.fallback;`;
     }
 
     function check(condition: string, expected: string) {
       // prettier-ignore
       const compare = [
-        `if (onError !== ABORT) path[pos] = "${key}";`,
+        `if (onError !== ABORT) path[pos] = ${print(key)};`,
         `onError(path, pos + 1, mismatch(${expected}, found));`,
       ];
       // prettier-ignore
@@ -60,10 +62,10 @@ export class ObjectProperty<T> {
         optional
         ? compare
         : [
-          `if ("${key}" in value) {`,
+          `if (${print(key)} in value) {`,
             ...compare,
           `}`,
-          `else onError(path, pos, "Missing key ${key}");`
+          `else onError(path, pos, ${print(`Missing key ${print(key)}`)});`
         ];
       // prettier-ignore
       lines.push(
@@ -94,7 +96,7 @@ export class ObjectProperty<T> {
         // prettier-ignore
         lines.push(
           `if (found !== undefined) {`, 
-            `if (onError !== ABORT) path[pos] = "${key}";`,
+            `if (onError !== ABORT) path[pos] = ${print(key)};`,
             `const valid = ${param}.check(dryRun, found, runtimeType(found), path, pos + 1, onError);`,
             `if (valid === ABORT) return ABORT;`,
             `if (!dryRun && valid !== found) value[${print(key)}] = valid;`,
@@ -107,6 +109,12 @@ export class ObjectProperty<T> {
 
     return (this.code = lines.join('\n'));
   }
+}
+
+const validFieldName = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+
+export function fieldAccess(name:string) {
+  return validFieldName.test(name) ? `.${name}` : `[${print(name)}]`;
 }
 
 export type ObjectProperties<T> = ObjectProperty<T>[];

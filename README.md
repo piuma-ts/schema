@@ -41,7 +41,7 @@ type Post = typeof Post.fallback; // get the corresponding TypeScript type
 const data: any = { title: 'Lorem Ipsum', content: 'Dolor sit amet' };
 
 console.log(Post.is(data)); // false
-console.log(Post.fix(data)); // [{ title: "Lorem Ipsum", content: "Dolor sit amet", comments: [] }, ["$: Missing key comments"]]
+console.log(Post.fix(data)); // [{ title: "Lorem Ipsum", content: "Dolor sit amet", comments: [] }, ['$: Missing key "comments"']]
 ```
 
 Here you can also see a unique feature of @piuma/schema in action: The ability to _fix_ invalid data, while reporting errors.

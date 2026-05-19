@@ -136,14 +136,14 @@ testBothModes('Complex Schema Tests', ({ test }) => {
 
     const errorMessages = errors.join('\n');
 
-    assert.ok(errorMessages.includes('$: Missing key id'));
-    assert.ok(errorMessages.includes('$.profile.personalInfo: Missing key name'));
+    assert.ok(errorMessages.includes('$: Missing key "id"'));
+    assert.ok(errorMessages.includes('$.profile.personalInfo: Missing key "name"'));
     assert.ok(errorMessages.includes('$.profile.personalInfo.age: Expected number but got string'));
     assert.ok(errorMessages.includes('$.profile.personalInfo.preferences.theme: Unexpected string "blue" (allowed: "light" | "dark")'));
-    assert.ok(errorMessages.includes('$.profile.personalInfo.preferences.notifications: Missing key sms'));
+    assert.ok(errorMessages.includes('$.profile.personalInfo.preferences.notifications: Missing key "sms"'));
     assert.ok(errorMessages.includes('$.profile.billing.plan: Unexpected string "basic" (allowed: "free" | "premium" | "enterprise")'));
-    assert.ok(errorMessages.includes('$.profile.billing.billingAddress: Missing key city'));
-    assert.ok(errorMessages.includes('$.profile.billing.billingAddress: Missing key country'));
+    assert.ok(errorMessages.includes('$.profile.billing.billingAddress: Missing key "city"'));
+    assert.ok(errorMessages.includes('$.profile.billing.billingAddress: Missing key "country"'));
     assert.ok(errorMessages.includes('$.metadata.tags: Expected array but got string'));
   });
 
@@ -236,8 +236,8 @@ testBothModes('Complex Schema Tests', ({ test }) => {
     assert.ok(errorMessages.includes('$.profile.orgInfo.employees[0].role: Unexpected string "super_admin" (allowed: "admin" | "member" | "viewer")'));
     assert.ok(errorMessages.includes('$.profile.orgInfo.employees[0].permissions.canEdit: Expected boolean but got string'));
     assert.ok(errorMessages.includes('$.profile.orgInfo.employees[1]: Expected object but got string'));
-    assert.ok(errorMessages.includes('$.profile.orgInfo.employees[2]: Missing key name'));
-    assert.ok(errorMessages.includes('$.profile.orgInfo.employees[2].permissions: Missing key canInvite'));
+    assert.ok(errorMessages.includes('$.profile.orgInfo.employees[2]: Missing key "name"'));
+    assert.ok(errorMessages.includes('$.profile.orgInfo.employees[2].permissions: Missing key "canInvite"'));
     assert.ok(errorMessages.includes('$.profile.orgInfo.settings.visibility: Unexpected string "semi-private" (allowed: "public" | "private")'));
     assert.ok(errorMessages.includes('$.metadata.tags[1]: Expected string but got number'));
     assert.ok(errorMessages.includes('$.metadata.tags[2]: Expected string but got boolean'));
@@ -502,6 +502,33 @@ testBothModes('Complex Schema Tests', ({ test }) => {
     assert.ok(errorMessages.includes('$.profile.orgInfo.settings.description: Expected string but got number'));
   });
 
+  test('should report a type error (not throw) when a union-of-objects field gets a non-object value', () => {
+    const base = {
+      id: 'user123',
+      metadata: { createdAt: '2023-01-01', lastLogin: '2023-12-01', tags: ['test'] },
+    };
+
+    const cases: [unknown, string][] = [
+      [null, '$.profile: Expected object but got null'],
+      ['not an object', '$.profile: Expected object but got string'],
+      [42, '$.profile: Expected object but got number'],
+      [[], '$.profile: Expected object but got array'],
+    ];
+
+    for (const [profile, expected] of cases) {
+      let result: any, errors: any;
+      assert.doesNotThrow(() => {
+        [result, errors] = userSchema.fix({ ...base, profile });
+      }, `fix should not throw for profile=${JSON.stringify(profile)}`);
+
+      assert.strictEqual(userSchema.is(result), true);
+      assert.ok(
+        errors.join('\n').includes(expected),
+        `Expected '${expected}' for profile=${JSON.stringify(profile)} but got:\n${errors.join('\n')}`
+      );
+    }
+  });
+
   test('should handle missing middleName field (required union field)', () => {
     const userMissingMiddleName = {
       id: 'user002',
@@ -544,6 +571,6 @@ testBothModes('Complex Schema Tests', ({ test }) => {
     assert.strictEqual(errors.length > 0, true);
 
     const errorMessages = errors.join('\n');
-    assert.ok(errorMessages.includes('$.profile.personalInfo: Missing key middleName'));
+    assert.ok(errorMessages.includes('$.profile.personalInfo: Missing key "middleName"'));
   });
 });
