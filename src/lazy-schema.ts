@@ -2,11 +2,18 @@ import { Schema, TYPE, Path, ErrorHandler, ABORT, RuntimeType } from './common';
 
 export class LazySchema<T> extends Schema<T> {
   get score() {
-    return this.definition.score;
+    return 1_000_000;
   }
 
+  protected fallingBack = false;
   get fallback() {
-    return this.definition.fallback as T;
+    if (this.fallingBack) return undefined as T;
+    this.fallingBack = true;
+    try {
+      return this.definition.fallback as T;
+    } finally {
+      this.fallingBack = false;
+    }
   }
 
   get [TYPE]() {
@@ -22,7 +29,15 @@ export class LazySchema<T> extends Schema<T> {
     super();
   }
 
+  protected checking = new Set();
+
   check(dryRun: boolean, value: unknown, type: RuntimeType, path: Path, pos: number, onError: ErrorHandler): T | ABORT {
-    return this.definition.check(dryRun, value, type, path, pos, onError) as T;
+    if (this.checking.has(value)) return value as T;
+    this.checking.add(value);
+    try {
+      return this.definition.check(dryRun, value, type, path, pos, onError) as T;
+    } finally {
+      this.checking.delete(value);
+    }
   }
 }
