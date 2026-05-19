@@ -113,7 +113,7 @@ export class ObjectProperty<T> {
 
 const validFieldName = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
 
-export function fieldAccess(name:string) {
+export function fieldAccess(name: string) {
   return validFieldName.test(name) ? `.${name}` : `[${print(name)}]`;
 }
 
@@ -124,7 +124,7 @@ export class ObjectSchema<T> extends Schema<T> {
 
   get fallback(): T {
     let result: T = {} as T;
-    for (const { key, schema } of this.properties) result[key] = schema.fallback;
+    for (const { key, schema, optional } of this.properties) if (!optional) result[key] = schema.fallback;
     return result;
   }
 
