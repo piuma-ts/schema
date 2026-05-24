@@ -7,7 +7,7 @@ import { LazySchema } from './lazy-schema';
 import { NeverSchema } from './never-schema';
 
 import { fieldAccess, ObjectProperties, ObjectProperty, ObjectSchema } from './object-schema';
-import { string } from './string-schema';
+import { PrimitiveSchema } from './primitive-schema';
 
 export function nullable<const Definition extends SchemaDefinition>(definition: Definition) {
   return union(null, definition) as Schema<SchemaType<Definition> | null>; // TODO: use a specialized schema?
@@ -50,14 +50,8 @@ export class UnionSchema<T> extends Schema<T> {
       added.add(s);
       kinds.add(s[TYPE]);
 
-      switch (s as Schema<any>) {
-        case string:
-        case number:
-        case boolean:
-          this.primitives.set(s[TYPE], true);
-          return;
-      }
       if (s.score === 0) this.constants.get(s[TYPE])?.push(s.fallback) ?? this.constants.set(s[TYPE], [s.fallback]);
+      else if (s instanceof PrimitiveSchema) this.primitives.set(s[TYPE], true);
       else if (s instanceof ArraySchema) this.arrays.push(s as Schema<any>);
       else if (s instanceof ObjectSchema) other.push([s, s.getProperties() as ObjectProperties<T>]);
       else if (s instanceof LazySchema) process(s.definition);

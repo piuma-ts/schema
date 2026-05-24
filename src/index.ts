@@ -1,9 +1,7 @@
 import { type Schema, Simplify, TYPE } from './common';
 import { LazySchema } from './lazy-schema';
-export { boolean } from './boolean-schema';
+import { PrimitiveSchema } from './primitive-schema';
 export { literal } from './constant-schema';
-export { number } from './number-schema';
-export { string } from './string-schema';
 export { intersection } from './intersection-schema';
 export { union, nullable } from './union-schema';
 
@@ -17,6 +15,10 @@ export { config, type Schema } from './common';
 
 export const unknown = new AnySchema<unknown>();
 export const any: AnySchema<any> = unknown;
+
+export const boolean = new PrimitiveSchema(false, 1);
+export const number = new PrimitiveSchema(0, 2);
+export const string = new PrimitiveSchema('', 3);
 
 export function define<const Definition extends SchemaDefinition>(definition: Definition): DefinitionType<Definition> {
   if (typeof definition === 'object') {

@@ -126,9 +126,9 @@ First, let's compare these libraries in terms of the size they will add to your 
 | Library       |             Size |
 | :------------ | ---------------: |
 | Valibot       |           6.9 kb |
-| @piuma/schema |          11.2 kb |
+| @piuma/schema |          12.2 kb |
 | Zod           |          55.8 kb |
-| ArkType       |         146.0 kb |
+| ArkType       |         149.7 kb |
 
 The Valibot and Zod numbers are based on including roughly the same functionality as @piuma/schema.
 
