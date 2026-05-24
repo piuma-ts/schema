@@ -1,4 +1,4 @@
-import { array, boolean, define, intersection, nullable, number, string, union } from '@piuma/schema';
+import { array, boolean, define, intersection, nullable, number, string, union } from '../src';
 
 export const userSchema = define({
   id: string,

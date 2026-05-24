@@ -1,5 +1,7 @@
 import { string, number, boolean, ObjectDefinition, object, SchemaType } from '.';
-import { Schema, TYPE, Path, ErrorHandler, ABORT, mismatch, RuntimeType, runtimeType, config, makeChecker, print } from './common';
+import { Schema, TYPE, Path, ErrorHandler, ABORT, mismatch, RuntimeType, runtimeType, config, makeChecker, print, Normalize } from './common';
+import { IntersectionSchema } from './intersection-schema';
+import { NeverSchema } from './never-schema';
 
 let propertyIdCounter = 0;
 export class ObjectProperty<T> {
@@ -117,9 +119,10 @@ export function fieldAccess(name: string) {
   return validFieldName.test(name) ? `.${name}` : `[${print(name)}]`;
 }
 
-export type ObjectProperties<T> = ObjectProperty<T>[];
+export type ObjectProperties<T> = readonly ObjectProperty<T>[];
 
 export class ObjectSchema<T> extends Schema<T> {
+  static readonly OBJECT = new ObjectSchema<object>([]);
   static optimize = true;
 
   get fallback(): T {
@@ -128,22 +131,25 @@ export class ObjectSchema<T> extends Schema<T> {
     return result;
   }
 
+  readonly properties: ObjectProperties<T>;
   readonly [TYPE] = 'object';
-  readonly score = 100;
+  readonly score = 100;// TODO: might make sense to derive this from the properties
 
-  constructor(protected properties: ObjectProperties<T>) {
+  constructor(properties: ObjectProperties<T>) {
     super();
 
-    properties.sort((a, b) => a.score - b.score);
+    this.properties = properties.toSorted((a, b) => a.score - b.score);
   }
 
   getProperties(): ObjectProperties<T> {
     return this.properties.slice();
   }
 
-  extend<R extends ObjectSchema<any> | ObjectDefinition>(fields: R): ObjectSchema<T & (R extends ObjectSchema<infer U> ? U : SchemaType<R>)> {
-    const other: ObjectSchema<any> = fields instanceof ObjectSchema ? fields : object(fields);
-    return new ObjectSchema<any>(other.properties.concat(this.properties));
+  extend<R extends ObjectSchema<any> | ObjectDefinition>(fields: R) {
+    const other = fields instanceof ObjectSchema ? fields : object(fields);
+    type Normalized = Normalize<T & (R extends ObjectSchema<infer U> ? U : SchemaType<R>)>;
+    type Ret = Normalized extends never ? NeverSchema : ObjectSchema<Normalized>;
+    return merge<Ret>([other as any, this as any]) as Ret;
   }
 
   protected optimize() {
@@ -179,5 +185,44 @@ export class ObjectSchema<T> extends Schema<T> {
     for (const p of this.properties) if (p.check(dryRun, value, path, pos, onError) === ABORT) return ABORT;
 
     return value as T;
+  }
+}
+
+export function merge<T>(schemas: ObjectSchema<T>[]) {
+  switch (schemas.length) {
+    case 0:
+      return ObjectSchema.OBJECT as any as ObjectSchema<T>;
+    case 1:
+      return schemas[0];
+    default:
+      const byKey = new Map<string, ObjectProperty<T>[]>();
+
+      for (const s of schemas) 
+        for (const p of s.properties) {
+          const existing = byKey.get(p.key);
+          if (existing) existing.push(p);
+          else byKey.set(p.key, [p]);
+        }
+
+      const properties: ObjectProperty<T>[] = [];
+
+      for (const group of byKey.values()) 
+        switch (group.length) {
+          case 1:
+            properties.push(group[0]);
+            break;
+          default:
+            const schema = IntersectionSchema.of(group.map(p => p.schema));
+            const optional = group.every(p => p.optional);
+            switch (schema.score) {
+              case -1:
+                if (!optional) return NeverSchema.INST;
+              default:
+                properties.push(new ObjectProperty(group[0].key, schema, optional));
+                break;
+            }
+        }
+
+      return new ObjectSchema<T>(properties);
   }
 }

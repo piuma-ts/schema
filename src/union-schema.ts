@@ -79,7 +79,7 @@ export class UnionSchema<T> extends Schema<T> {
   static of<T>(schemas: Schema<T>[]): Schema<T> {
     switch (schemas.length) {
       case 0:
-        return new NeverSchema() as any;
+        return NeverSchema.INST as any;
       case 1:
         return schemas[0];
     }

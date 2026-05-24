@@ -50,6 +50,13 @@ export type Checker<T> = {
 };
 
 export type Simplify<T> = { [KeyType in keyof T]: T[KeyType] } & {}; // stolen from type-fest to avoid the dependency for one line
+type MandatoryNeverKeys<T> = {
+  [K in keyof T]-?: {} extends Pick<T, K> ? never : [T[K]] extends [never] ? K : never;
+}[keyof T];
+
+type Collapse<T> = [MandatoryNeverKeys<T>] extends [never] ? T : never;
+
+export type Normalize<T> = T extends object ? Collapse<Simplify<T>> : T;
 
 export function optimizeable<T>(c: Check<T>, optimized: () => Check<T>): Check<T> {
   let count = 0;

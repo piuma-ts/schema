@@ -26,6 +26,7 @@
     "bench": "npx tsx benchmarks/wall/index.ts"
   },
   "devDependencies": {
+    "@types/node": "^25.9.0",
     "arktype": "2.2",
     "esbuild": "^0.25.5",
     "prettier": "^3.6.2",

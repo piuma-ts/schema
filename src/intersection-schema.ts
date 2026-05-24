@@ -1,11 +1,12 @@
-import { define, SchemaDefinition, SchemaType } from '.';
-import { AnySchema } from './any-schema';
-import { ABORT, Check, Schema, TYPE, makeChecker, optimizeable } from './common';
+import { define, SchemaDefinition, SchemaType, any } from '.';
+import { ABORT, Check, Schema, Normalize, TYPE, makeChecker, optimizeable, runtimeType } from './common';
 import { NeverSchema } from './never-schema';
-import { type UnionSchema } from './union-schema';
+import { merge, ObjectSchema } from './object-schema';
+import { UnionSchema } from './union-schema';
+import { select } from './util';
 
 export function intersection<const Definitions extends SchemaDefinition[]>(...definitions: Definitions) {
-  type Ret = IntersectionOfSchemaTypes<Definitions>;
+  type Ret = Normalize<IntersectionOfSchemaTypes<Definitions>>;
   return IntersectionSchema.of<Ret>(definitions.map<Schema<Ret>>(define as any));
 }
 
@@ -53,29 +54,53 @@ export class IntersectionSchema<T> extends Schema<T> {
   }
 
   static of<T>(schemas: Schema<T>[]): Schema<T> {
-    if (schemas.length === 0) return new AnySchema() as any;
-
     const flat: Schema<T>[] = [];
+    const objects: ObjectSchema<T>[] = [];
+    const types = new Set<string>();
+
+    let hasUnion = false;
 
     {
       function add(schema: Schema<T>) {
-        if (schema.score === 10000) {
-          for (const s of (schema as IntersectionSchema<T>).schemas) add(s);
-        } else flat.push(schema);
-        // TODO: consider union schemas
+        switch (schema.score) {
+          case 10000:
+            for (const s of (schema as IntersectionSchema<T>).schemas) add(s);
+            break;
+          case 100:
+            types.add(schema[TYPE]);
+            objects.push(schema as ObjectSchema<T>);
+            break;
+          case 100000:
+            break;
+          default:
+            if (!hasUnion) hasUnion = schema instanceof UnionSchema;
+            types.add(schema[TYPE]);
+            flat.push(schema);
+            break;
+        }
       }
 
       for (const schema of schemas) add(schema);
 
+      if (objects.length > 0) {
+        const s = merge(objects);
+        if (s.score === -1) return NeverSchema.INST as any;
+        flat.push(s);
+      }
+
+      switch (flat.length) {
+        case 0:
+          return any;
+        case 1:
+          return flat[0];
+      }
+
+      if (!hasUnion && types.size > 1) return NeverSchema.INST as any;
+
       flat.sort((a, b) => a.score - b.score);
     }
 
-    const first = flat[0];
-    const kind = first[TYPE];
-
-    if (!(first.score === 20000 && (first as UnionSchema<T>).multiType)) {
-      for (const schema of flat) if (schema[TYPE] !== kind) return new NeverSchema() as any;
-    }
+    const kind = `(${Array.from(new Set(flat.map(s => s[TYPE]))).join('&')})`;
 
     return new IntersectionSchema<T>(kind, flat);
   }
@@ -89,20 +114,17 @@ function intersect<V>(values: V[]): V {
       return values[0];
     default:
       const first = values[0];
-      const type = typeof first;
-      switch (type) {
-        case 'string':
-        case 'number':
-        case 'boolean':
-          return first;
-        case 'object':
-          if (first === null) return null as V;
-          if (Array.isArray(first)) return [] as V;
-          return Object.assign({}, ...values) as V; // technically this is not correct (should intersect values, rather than successively overriding), but it's good enough for now
-        default:
-          throw 'cannot intersect ' + typeof first;
-      }
+
+      if (runtimeType(first) === 'object') return intersectObjects(values);
+
+      return first;
   }
+}
+
+function intersectObjects<T>(objects: T[]): T {
+  const fields = Array.from(new Set(objects.flatMap(o => Object.keys(o as any))));
+
+  return Object.fromEntries(fields.map(f => [f, intersect(select(objects, o => (o as any)[f]))])) as T;
 }
 
 export type IntersectionOfSchemaTypes<T extends readonly SchemaDefinition[]> = T extends readonly [infer Head, ...infer Tail]
