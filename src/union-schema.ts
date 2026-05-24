@@ -1,4 +1,4 @@
-import { boolean, define, number, SchemaDefinition, SchemaType } from '.';
+import { define, SchemaDefinition, SchemaType } from '.';
 import { ArraySchema } from './array-schema';
 import { ABORT, Check, ErrorHandler, makeChecker, mismatch, optimizeable, Path, print, RuntimeType, Schema, Simplify, TYPE } from './common';
 
@@ -6,7 +6,7 @@ import { type IntersectionSchema } from './intersection-schema';
 import { LazySchema } from './lazy-schema';
 import { NeverSchema } from './never-schema';
 
-import { fieldAccess, ObjectProperties, ObjectProperty, ObjectSchema } from './object-schema';
+import { checkObject, fieldAccess, ObjectProperties, ObjectProperty, ObjectSchema } from './object-schema';
 import { PrimitiveSchema } from './primitive-schema';
 
 export function nullable<const Definition extends SchemaDefinition>(definition: Definition) {
@@ -25,7 +25,7 @@ export class UnionSchema<T> extends Schema<T> {
 
   protected readonly schemas: Schema<T>[] = [];
   protected readonly primitives = new Map<string, boolean>();
-  protected readonly arrays: Schema<T>[] = [];
+  protected readonly arr: Schema<T>[] = [];
   protected readonly constants = new Map<string, T[]>();
   protected readonly other: Check<T>;
   readonly multiType: boolean = false;
@@ -52,11 +52,11 @@ export class UnionSchema<T> extends Schema<T> {
 
       if (s.score === 0) this.constants.get(s[TYPE])?.push(s.fallback) ?? this.constants.set(s[TYPE], [s.fallback]);
       else if (s instanceof PrimitiveSchema) this.primitives.set(s[TYPE], true);
-      else if (s instanceof ArraySchema) this.arrays.push(s as Schema<any>);
-      else if (s instanceof ObjectSchema) other.push([s, s.getProperties() as ObjectProperties<T>]);
+      else if (s instanceof ArraySchema) this.arr.push(s as Schema<any>);
+      else if (s instanceof ObjectSchema) other.push([s, s.props() as ObjectProperties<T>]);
       else if (s instanceof LazySchema) process(s.definition);
       else if (s.score === 10000)
-        other.push([s, (s as IntersectionSchema<T>).schemas.flatMap(s => (s instanceof ObjectSchema ? s.getProperties() : [])) as ObjectProperties<T>]);
+        other.push([s, (s as IntersectionSchema<T>).schemas.flatMap(s => (s instanceof ObjectSchema ? s.props() : [])) as ObjectProperties<T>]);
       else other.push([s, []]);
     };
 
@@ -101,15 +101,15 @@ export class UnionSchema<T> extends Schema<T> {
         );
         return this.fallback;
       case 'array':
-        switch (this.arrays.length) {
+        switch (this.arr.length) {
           case 0:
             if (onError === ABORT) return ABORT;
             onError(path, pos, `Unexpected array`);
             return this.fallback;
           case 1:
-            return this.arrays[0].check(dryRun, value, type, path, pos, onError) as T;
+            return this.arr[0].check(dryRun, value, type, path, pos, onError) as T;
           default:
-            for (const a of this.arrays) if ((a as Schema<T>).is(value)) return value;
+            for (const a of this.arr) if ((a as Schema<T>).is(value)) return value;
             if (onError === ABORT) return ABORT;
             onError(path, pos, `Array found, but no matching schema`);
             return this.fallback;
@@ -132,15 +132,7 @@ export type UnionOfSchemaTypes<T extends readonly SchemaDefinition[]> = T extend
 type Candidates<T> = [schema: Schema<T>, properties: ObjectProperties<T>][];
 
 function optimizedDecisionTree<T>(tree: Tree<T>, getFallback: () => T) {
-  const lines: string[] = [];
-
-  lines.push(
-    `if (type !== 'object') {`,
-      `if (onError === ABORT) return ABORT`,
-      `onError(path, pos, mismatch('object', value))`,
-      `return getDefault()`,
-    `}`,
-  );
+  const lines = checkObject();
 
   const schemas: Schema<any>[] = [];
 
@@ -294,7 +286,8 @@ function makeCheck<T>(tree: Tree<T>, getFallback: () => T): Check<T> {
       const alternative = tree[2] ? makeCheck(tree[2], getFallback) : null;
 
       return (dryRun, value: any, type, path, pos, onError) => {
-        if (type !== 'object') {// TODO: should be enough to do this at the root, but oh well ...
+        if (type !== 'object') {
+          // TODO: should be enough to do this at the root, but oh well ...
           if (onError === ABORT) return ABORT;
           onError(path, pos, mismatch('object', value));
           return getFallback();

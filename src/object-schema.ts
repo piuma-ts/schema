@@ -141,7 +141,7 @@ export class ObjectSchema<T> extends Schema<T> {
     this.properties = properties.toSorted((a, b) => a.score - b.score);
   }
 
-  getProperties(): ObjectProperties<T> {
+  props(): ObjectProperties<T> {
     return this.properties.slice();
   }
 
@@ -152,11 +152,10 @@ export class ObjectSchema<T> extends Schema<T> {
     return merge<Ret>([other as any, this as any]) as Ret;
   }
 
-  protected optimize() {
-    const lines: string[] = [];
-    const properties = this.properties;
 
-    lines.push(`if (type !== "object") { if (onError === ABORT) return ABORT; onError(path, pos, mismatch("object", value)); return getDefault(); }`);
+  protected optimize() {
+    const lines = checkObject();
+    const properties = this.properties;
 
     for (const p of properties) lines.push(p.getCode());
 
@@ -225,4 +224,8 @@ export function merge<T>(schemas: ObjectSchema<T>[]) {
 
       return new ObjectSchema<T>(properties);
   }
+}
+
+export function checkObject() {
+  return [`if (type !== "object") { if (onError === ABORT) return ABORT; onError(path, pos, mismatch("object", value)); return getDefault(); }`];
 }
