@@ -149,7 +149,7 @@ We are using two schemas here, one from our speed benchmarks (see below) and one
 - idiomatic: used as suggested in the docs: `import { z } from zod; z.object()`
 - optimal: used in a way that generates more compact code `import { object } from zod; object()`
 
-This comparison warrants more data points, but still is quite representative of the differences you should expect. Here is an attempt to explain the numbers above:
+This comparison could use more data points, but still is quite representative of the differences you should expect. Here is an attempt to explain the numbers above:
 
 - ArkType relies on its own string based DSL to define types, which while elegant potentially embeds a considerable amount of unminifiable strings in the output
 - Valibot (and optimal Zod) requires more function calls, e.g. `string()` vs. just `string` in @piuma/schema and does so even when nesting, e.g. `array(object({}))` vs. `array({})`
